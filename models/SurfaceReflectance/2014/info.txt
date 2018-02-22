@@ -1,0 +1,1 @@
+Surface reflectance prior model is located in this directory.

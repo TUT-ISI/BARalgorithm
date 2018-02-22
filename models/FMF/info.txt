@@ -1,0 +1,2 @@
+There should be file 'gt_ff_0550nm.nc' in this directory.
+You can download the file from: ftp://ftp-projects.zmaw.de/aerocom/climatology/MACv2_2017/550nm_2005/gt_ff_0550nm.nc
