@@ -13,6 +13,13 @@ MIT licence (found below).
 
 For the most recent version of the codes, please see https://github.com/TUT-ISI/BARalgorithm
 
+## MODELS
+
+The models directory contains model files needed to run the code and some of the files are not available at Github.
+To download the LUT model (models/LUT directory) and surface reflectance prior model (models/SurfaceReflectance/2014)
+please download the code package from Zenodo (https://doi.org/10.5281/zenodo.1182939) and copy the
+contents of these two directories of the Zenodo package to corresponding BARalgorithm folders.
+
 ---
 
 Reference:

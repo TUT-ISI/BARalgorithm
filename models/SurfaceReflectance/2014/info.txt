@@ -1,1 +1,5 @@
 Surface reflectance prior model is located in this directory.
+
+To download the LUT model (models/LUT directory) and surface reflectance prior model (models/SurfaceReflectance/2014)
+please download the code package from Zenodo (https://doi.org/10.5281/zenodo.1182939) and copy the
+contents of these two model directories in the Zenodo package to corresponding BARalgorithm folders.
