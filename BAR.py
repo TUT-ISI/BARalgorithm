@@ -1,13 +1,13 @@
 """
 Bayesian Aerosol Retrieval algorithm
-version 1.0
+version 1.01 (12 August 2020)
 
 For the most recent version of the codes, please see https://github.com/TUT-ISI/BARalgorithm
 
 Reference:
-Lipponen, A., Mielonen, T., Pitkänen, M. R. A., Levy, R. C., Sawyer, V. R., Romakkaniemi, S., Kolehmainen, V.,
-and Arola, A.: Bayesian Aerosol Retrieval Algorithm for MODIS AOD retrieval over land, Atmos. Meas. Tech.,
-https://doi.org/10.5194/amt-2017-359, accepted, 2018.
+Lipponen, A., Mielonen, T., Pitkänen, M. R. A., Levy, R. C., Sawyer, V. R., Romakkaniemi, S., Kolehmainen, V., and Arola, A.:
+Bayesian Aerosol Retrieval Algorithm for MODIS AOD retrieval over land, Atmos. Meas. Tech., 11, 1529–1547, 2018.
+https://doi.org/10.5194/amt-11-1529-2018.
 
 Contact information:
 Antti Lipponen
@@ -16,7 +16,7 @@ antti.lipponen@fmi.fi
 
 ----
 
-Copyright 2018 Antti Lipponen / Finnish Meteorological Institute
+Copyright 2018-2020 Antti Lipponen / Finnish Meteorological Institute
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -59,7 +59,7 @@ if len(sys.argv) < 2:
 
 dataFile = sys.argv[1]
 inputFilePath, inputFileName = os.path.split(dataFile)
-print('\nBayesian Aerosol Retrieval (BAR) algorithm version 1.0.\n\n  ---------------------\n  Reference:\n  Lipponen, A., Mielonen, T., Pitkänen, M. R. A., Levy, R. C., Sawyer, V. R., Romakkaniemi, S., Kolehmainen, V., and Arola, A.:\n  Bayesian Aerosol Retrieval Algorithm for MODIS AOD retrieval over land, Atmos. Meas. Tech., https://doi.org/10.5194/amt-2017-359, accepted, 2018.\n  ---------------------\n  Contact information:\n  Antti Lipponen, Finnish Meteorological Institute\n  antti.lipponen@fmi.fi\n  ---------------------\n')
+print('\nBayesian Aerosol Retrieval (BAR) algorithm version 1.01 (12 August 2020).\n\n  ---------------------\n  Reference:\n  Lipponen, A., Mielonen, T., Pitkänen, M. R. A., Levy, R. C., Sawyer, V. R., Romakkaniemi, S., Kolehmainen, V., and Arola, A.:\n  Bayesian Aerosol Retrieval Algorithm for MODIS AOD retrieval over land, Atmos. Meas. Tech., 11, 1529–1547, 2018. https://doi.org/10.5194/amt-11-1529-2018\n  ---------------------\n  Contact information:\n  Antti Lipponen, Finnish Meteorological Institute\n  antti.lipponen@fmi.fi\n  ---------------------\n')
 print('  Retrieving MODIS granule file: {}'.format(inputFileName))
 
 if len(sys.argv) >= 3 and sys.argv[2][0] != '-':
@@ -272,6 +272,13 @@ savedata = {
     'BAR_rhos553': -9.999 * np.ones(gFull.shape[0]),
     'BAR_rhos644': -9.999 * np.ones(gFull.shape[0]),
     'BAR_rhos211': -9.999 * np.ones(gFull.shape[0]),
+    'BAR_logAODplus1': -9.999 * np.ones(gFull.shape[0]),
+    'BAR_logAODplus1_std': -9.999 * np.ones(gFull.shape[0]),
+    'BAR_FMF_std': -9.999 * np.ones(gFull.shape[0]),
+    'BAR_rhos466_std': -9.999 * np.ones(gFull.shape[0]),
+    'BAR_rhos553_std': -9.999 * np.ones(gFull.shape[0]),
+    'BAR_rhos644_std': -9.999 * np.ones(gFull.shape[0]),
+    'BAR_rhos211_std': -9.999 * np.ones(gFull.shape[0]),
     'lon': gFull[:, 0],
     'lat': gFull[:, 1],
     'DarkTarget_AOD': modisData['Corrected_Optical_Depth_Land553'],
@@ -279,7 +286,7 @@ savedata = {
 }
 
 if not settings['quantifyUncertainty']:
-    savedata = {k: savedata[k] for k in savedata if k.find('percentile') < 0}
+    savedata = {k: savedata[k] for k in savedata if k.find('percentile') < 0 and k.find('_std') < 0}
 
 for iPart, partData in enumerate(allpartsData):
     if len(allpartsData) == 1:
@@ -390,6 +397,6 @@ for key in savedata.keys():
         var.vmin = 0.0
         var.vmax = 1.0
     varToBeSaved[np.logical_or(varToBeSaved < var.vmin, varToBeSaved > var.vmax)] = np.nan
-    var[:] = varToBeSaved
+    var[:] = varToBeSaved.reshape((nX, nY))
 nc.close()
 print('***** ALL DONE FOR THIS GRANULE *****\n\nThanks for using Bayesian Aerosol Retrieval!\n')
