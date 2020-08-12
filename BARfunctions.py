@@ -1,13 +1,13 @@
 """
 Bayesian Aerosol Retrieval algorithm function file
-version 1.0
+version 1.01 (12 August 2020)
 
 For the most recent version of the codes, please see https://github.com/TUT-ISI/BARalgorithm
 
 Reference:
-Lipponen, A., Mielonen, T., Pitkänen, M. R. A., Levy, R. C., Sawyer, V. R., Romakkaniemi, S., Kolehmainen, V.,
-and Arola, A.: Bayesian Aerosol Retrieval Algorithm for MODIS AOD retrieval over land, Atmos. Meas. Tech.,
-https://doi.org/10.5194/amt-2017-359, accepted, 2018.
+Lipponen, A., Mielonen, T., Pitkänen, M. R. A., Levy, R. C., Sawyer, V. R., Romakkaniemi, S., Kolehmainen, V., and Arola, A.:
+Bayesian Aerosol Retrieval Algorithm for MODIS AOD retrieval over land, Atmos. Meas. Tech., 11, 1529–1547, 2018.
+https://doi.org/10.5194/amt-11-1529-2018.
 
 Contact information:
 Antti Lipponen
@@ -16,7 +16,7 @@ antti.lipponen@fmi.fi
 
 ----
 
-Copyright 2018 Antti Lipponen / Finnish Meteorological Institute
+Copyright 2018-2020 Antti Lipponen / Finnish Meteorological Institute
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -515,13 +515,20 @@ class InverseProblem(object):
         J[2 * self.Ng:6 * self.Ng] = (2.0 * iNdObs.ravel() * d_rho_TOA_d_rhos) + J_fval_rhos
         return func_val, J
 
-    def Jacobian_aod_fmf(self, x):
+    def Jacobian_aod_fmf_rhos(self, x):
         logaodplus1, fmf, rho_s = x[0 * self.Ng:1 * self.Ng], x[1 * self.Ng:2 * self.Ng], x[2 * self.Ng:6 * self.Ng]
+        fval_logaodplus1, J_fval_logaodplus1 = self.functional_prior_val_and_Jac(self.priorLogAODPlus1, logaodplus1)
+        fval_fmf, J_fval_fmf = self.functional_prior_val_and_Jac(self.priorFMF, fmf)
+        fval_rhos, J_fval_rhos = self.functional_prior_val_and_Jac(self.priorRhos, rho_s)
         rhostar_fine, J_rhostar_logaodplus1_fine, J_rhostar_rhos_fine = self.simulate(logaodplus1, rho_s, self.polylookupMats_fine, True)
         rhostar_coarse, J_rhostar_logaodplus1_coarse, J_rhostar_rhos_coarse = self.simulate(logaodplus1, rho_s, self.polylookupMats_coarse, True)
+        rhostar = np.tile(fmf, (4,)) * rhostar_fine + (1.0 - np.tile(fmf, (4,))) * rhostar_coarse
         J_rhostar_logaodplus1 = np.tile(fmf, (4,)) * J_rhostar_logaodplus1_fine + (1.0 - np.tile(fmf, (4,))) * J_rhostar_logaodplus1_coarse
         J_rhostar_fmf = rhostar_fine - rhostar_coarse
-        return J_rhostar_logaodplus1, J_rhostar_fmf
+        J_rhostar_logaodplus1 = 1.0 / (1.0 + rhostar) * J_rhostar_logaodplus1
+        J_rhostar_fmf = 1.0 / (1.0 + rhostar) * J_rhostar_fmf
+        d_rho_TOA_d_rhos = np.tile(fmf, (4,)) * J_rhostar_rhos_fine + (1.0 - np.tile(fmf, (4,))) * J_rhostar_rhos_coarse
+        return J_rhostar_logaodplus1, J_rhostar_fmf, d_rho_TOA_d_rhos
 
     def simulate(self, logaodplus1, rhos, lookupMatrices, derivatives=True):
         NLWAV = 4
@@ -619,28 +626,32 @@ def BARretrieve(g, AOD0, FMF0, AODprior, FMFprior, surfPrior, polylookupMats_fin
         if IP.invnoiseCov is None:
             variance_X = np.concatenate((IP.priorLogAODPlus1['cov'].diagonal(), IP.priorFMF['cov'].diagonal()))
         else:
-            J_AODPlus1, J_FMF = IP.Jacobian_aod_fmf(res.x)
+            J_AODPlus1, J_FMF, d_rho_TOA_d_rhos = IP.Jacobian_aod_fmf_rhos(res.x)
             J_AODPlus1 = J_AODPlus1.reshape((-1, IP.Ng))
             J_FMF = J_FMF.reshape((-1, IP.Ng))
-            J = np.zeros((4 * IP.Ng, 2 * IP.Ng))
+            d_rho_TOA_d_rhos = d_rho_TOA_d_rhos.reshape((-1, IP.Ng))
+            J = np.zeros((4 * IP.Ng, 6 * IP.Ng))
             for ii in range(IP.Ng):
-                J[0 * IP.Ng + ii, ii] = J_AODPlus1[0, ii]
-                J[1 * IP.Ng + ii, ii] = J_AODPlus1[1, ii]
-                J[2 * IP.Ng + ii, ii] = J_AODPlus1[2, ii]
-                J[3 * IP.Ng + ii, ii] = J_AODPlus1[3, ii]
-                J[0 * IP.Ng + ii, IP.Ng + ii] = J_FMF[0, ii]
-                J[1 * IP.Ng + ii, IP.Ng + ii] = J_FMF[1, ii]
-                J[2 * IP.Ng + ii, IP.Ng + ii] = J_FMF[2, ii]
-                J[3 * IP.Ng + ii, IP.Ng + ii] = J_FMF[3, ii]
+                J[0 * IP.Ng + ii, 0 * IP.Ng + ii] = J_AODPlus1[0, ii]
+                J[1 * IP.Ng + ii, 0 * IP.Ng + ii] = J_AODPlus1[1, ii]
+                J[2 * IP.Ng + ii, 0 * IP.Ng + ii] = J_AODPlus1[2, ii]
+                J[3 * IP.Ng + ii, 0 * IP.Ng + ii] = J_AODPlus1[3, ii]
+                J[0 * IP.Ng + ii, 1 * IP.Ng + ii] = J_FMF[0, ii]
+                J[1 * IP.Ng + ii, 1 * IP.Ng + ii] = J_FMF[1, ii]
+                J[2 * IP.Ng + ii, 1 * IP.Ng + ii] = J_FMF[2, ii]
+                J[3 * IP.Ng + ii, 1 * IP.Ng + ii] = J_FMF[3, ii]
+                J[0 * IP.Ng + ii, 2 * IP.Ng + ii] = d_rho_TOA_d_rhos[0, ii]
+                J[1 * IP.Ng + ii, 3 * IP.Ng + ii] = d_rho_TOA_d_rhos[1, ii]
+                J[2 * IP.Ng + ii, 4 * IP.Ng + ii] = d_rho_TOA_d_rhos[2, ii]
+                J[3 * IP.Ng + ii, 5 * IP.Ng + ii] = d_rho_TOA_d_rhos[3, ii]
             if settings['useSpatialCorrelations']:
-                inv_Cov_LogAODPlus1FMF = (J.T.dot(IP.invnoiseCov.dot(J))) + block_diag(IP.priorLogAODPlus1['iCov'], IP.priorFMF['iCov'])
+                inv_Cov_LogAODPlus1FMF = (J.T.dot(IP.invnoiseCov.dot(J))) + np.linalg.inv(block_diag(IP.priorLogAODPlus1['cov'], IP.priorFMF['cov'], np.array(diags(np.concatenate((IP.priorRhos466['std']**2, IP.priorRhos553['std']**2, IP.priorRhos644['std']**2, IP.priorRhos2113['std']**2)), 0).todense())))
             else:
-                inv_Cov_LogAODPlus1FMF = (J.T.dot(IP.invnoiseCov.dot(J))) + diags(np.concatenate((IP.priorLogAODPlus1['iCov'].diagonal(), IP.priorFMF['iCov'].diagonal())), 0)
+                inv_Cov_LogAODPlus1FMF = (J.T.dot(IP.invnoiseCov.dot(J))) + diags(np.concatenate((IP.priorLogAODPlus1['iCov'].diagonal(), IP.priorFMF['iCov'].diagonal(), IP.priorRhos466['std']**2, IP.priorRhos553['std']**2, IP.priorRhos644['std']**2, IP.priorRhos2113['std']**2)), 0)
             cov_LogAODPlus1FMF = np.linalg.inv(inv_Cov_LogAODPlus1FMF)
-
             variance_X = np.array(cov_LogAODPlus1FMF.diagonal()).ravel()
 
-        std_logaodPlus1, std_fmf = np.sqrt(variance_X[:IP.Ng]), np.sqrt(variance_X[IP.Ng:2 * IP.Ng])
+        std_logaodPlus1, std_fmf, std_rhos = np.sqrt(variance_X[:IP.Ng]), np.sqrt(variance_X[IP.Ng:2 * IP.Ng]), np.sqrt(variance_X[2 * IP.Ng:])
         print('Done!')
 
         AODinterval68 = np.clip(np.exp(norm.interval(0.68, loc=logaodPlus1, scale=std_logaodPlus1)) - 1.0, a_min=0.0, a_max=np.inf)
@@ -651,6 +662,8 @@ def BARretrieve(g, AOD0, FMF0, AODprior, FMFprior, surfPrior, polylookupMats_fin
         FMFinterval95 = np.clip(norm.interval(0.95, loc=fmf, scale=std_fmf), a_min=0.0, a_max=1.0)
         BARresult = {
             'BAR_AOD': aod550,
+            'BAR_logAODplus1': logaodPlus1,
+            'BAR_logAODplus1_std': std_logaodPlus1,
             'BAR_AOD466': aod466,
             'BAR_AOD644': aod644,
             'BAR_AOD_percentile_2.5': AODinterval95[0],
@@ -660,6 +673,7 @@ def BARretrieve(g, AOD0, FMF0, AODprior, FMFprior, surfPrior, polylookupMats_fin
             'BAR_AOD_percentile_95.0': AODinterval90[1],
             'BAR_AOD_percentile_97.5': AODinterval95[1],
             'BAR_FMF': fmf,
+            'BAR_FMF_std': std_fmf,
             'BAR_FMF_percentile_2.5': FMFinterval68[0],
             'BAR_FMF_percentile_5.0': FMFinterval90[0],
             'BAR_FMF_percentile_16.0': FMFinterval95[0],
@@ -670,10 +684,15 @@ def BARretrieve(g, AOD0, FMF0, AODprior, FMFprior, surfPrior, polylookupMats_fin
             'BAR_rhos553': rhos553,
             'BAR_rhos644': rhos644,
             'BAR_rhos211': rhos2113,
+            'BAR_rhos466_std': std_rhos[0 * IP.Ng:1 * IP.Ng],
+            'BAR_rhos553_std': std_rhos[1 * IP.Ng:2 * IP.Ng],
+            'BAR_rhos644_std': std_rhos[2 * IP.Ng:3 * IP.Ng],
+            'BAR_rhos211_std': std_rhos[3 * IP.Ng:4 * IP.Ng],
         }
     else:
         BARresult = {
             'BAR_AOD': aod550,
+            'BAR_logAODplus1': logaodPlus1,
             'BAR_AOD466': aod466,
             'BAR_AOD644': aod644,
             'BAR_FMF': fmf,
