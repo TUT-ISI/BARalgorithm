@@ -1,6 +1,6 @@
 # BARalgorithm
 Bayesian Aerosol Retrieval algorithm
-version 1.0
+version 1.01 (12 August 2020)
 
 This experimental code and data is meant for testing purposes only.
 As some of the models distributed with the code represent year 2014
@@ -22,14 +22,10 @@ contents of these two directories of the Zenodo package to corresponding BARalgo
 
 ---
 
-Reference:
-Lipponen, A., Mielonen, T., Pitkänen, M. R. A., Levy, R. C., Sawyer, V. R., Romakkaniemi, S., Kolehmainen, V.,
-and Arola, A.: Bayesian Aerosol Retrieval Algorithm for MODIS AOD retrieval over land, Atmos. Meas. Tech.,
-https://doi.org/10.5194/amt-2017-359, accepted, 2018.
-
-**Before citing the article please check the details of the final published version of the article
-from the Atmos. Meas. Tech. webpage: https://doi.org/10.5194/amt-2017-359**
-
+**Reference:**
+Lipponen, A., Mielonen, T., Pitkänen, M. R. A., Levy, R. C., Sawyer, V. R., Romakkaniemi, S., Kolehmainen, V., and Arola, A.:
+Bayesian Aerosol Retrieval Algorithm for MODIS AOD retrieval over land, Atmos. Meas. Tech., 11, 1529–1547, 2018.
+https://doi.org/10.5194/amt-11-1529-2018.
 
 Contact information:
 Antti Lipponen
@@ -38,7 +34,7 @@ antti.lipponen@fmi.fi
 
 ---
 
-Copyright 2018 Antti Lipponen / Finnish Meteorological Institute
+Copyright 2018-2020 Antti Lipponen / Finnish Meteorological Institute
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
@@ -60,7 +56,7 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEAL
   Bayesian Aerosol Retrieval (BAR) algorithm is a statistical aerosol retrieval algorithm and this
   code runs BAR algorithm using MODIS data over land.
   All technical details can be found from the article published in the Atmospheric Measurement Techniques
-  (https://doi.org/10.5194/amt-2017-359). The BAR algorithm is strongly based on NASA's Dark Target
+  (https://doi.org/10.5194/amt-11-1529-2018). The BAR algorithm is strongly based on NASA's Dark Target
   aerosol retrieval algorithm (https://darktarget.gsfc.nasa.gov/) and, for example, the radiative transfer
   simulation lookup-tables (LUTs) are based on the Dark Target LUTs distributed with the Dark
   Target stand-alone land code (https://darktarget.gsfc.nasa.gov/reference/code).
